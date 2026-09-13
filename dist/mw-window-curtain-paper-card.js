@@ -350,9 +350,18 @@
       + ".mwp-rg.drag .rgf{transition:none;}"
       + ".mwp-rg .rgs{position:absolute;top:0;bottom:0;width:" + MWP_MIN_TOUCH + "px;"
       + "transform:translateX(-50%);background:none;border:0;padding:0;cursor:pointer;}"
-      + ".mwp-rg .rgs::before{content:'';position:absolute;left:50%;top:26%;bottom:26%;width:2px;"
-      + "transform:translateX(-50%);border-radius:1px;background:" + ink.dim + ";opacity:.38;}"
-      + ".mwp-rg .rgv{position:absolute;inset:0;display:grid;place-items:center;"
+      + ".mwp-rg .rgs::before{content:'';position:absolute;left:50%;top:22%;bottom:22%;width:2px;"
+      + "transform:translateX(-50%);border-radius:1px;background:" + ink.text + ";opacity:.30;}"
+      + ".mwp-rg .rgs:first-of-type::before,.mwp-rg .rgs:last-of-type::before{opacity:.16;}"
+      + ".mwp-rg .rgs:active::before{opacity:.75;}"
+      // A ponta do trecho andado é um vinco, não uma borda: é o que conta ao
+      // olho onde a régua "parou" sem depender de cor de destaque.
+      + ".mwp-rg .rgf::after{content:'';position:absolute;right:0;top:12%;bottom:12%;width:2px;"
+      + "border-radius:1px;background:" + (o.dark ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.22)") + ";}"
+      // O número mora na ponta direita, não no meio: numa régua larga o valor
+      // centralizado cai longe do vinco e o olho procura os dois.
+      + ".mwp-rg .rgv{position:absolute;inset:0;display:grid;place-items:center end;"
+      + "padding-right:12px;box-sizing:border-box;"
       + "pointer-events:none;font-size:" + Math.max(10, Math.round(size * 0.2)) + "px;"
       + "font-weight:600;font-variant-numeric:tabular-nums;color:" + ink.text + ";}";
   };
@@ -488,7 +497,38 @@
     madeira: { a: "#b98a52", b: "#95682f", c: "#6d4a1c" },
     aluminio: { a: "#dfe3e6", b: "#b6bcc1", c: "#8e959b" },
   };
-  const frameTone = (key, dark) => FRAME_TONES[key] || (dark ? FRAME_TONES.escuro : FRAME_TONES.claro);
+  // A esquadria "auto" segue o PAPEL, não o tema do HA: o card é uma folha
+  // clara mesmo dentro de um dashboard escuro, e alumínio sobre creme é o que
+  // se enxerga. Sem isso a moldura some e a janela vira um borrão.
+  const frameTone = (key, dark) => FRAME_TONES[key] || (dark ? FRAME_TONES.claro : FRAME_TONES.aluminio);
+
+  // Escurece (ou clareia) uma cor hsl() da paleta. Existe para o PANO nascer
+  // separado da FOLHA sem obrigar o dono a escolher dois tons no editor:
+  // cortina creme em card creme faz "aberta" e "fechada" ficarem idênticas.
+  const shade = (col, dl, ds) => {
+    const v = String(col).trim();
+    let h, sat, l;
+    const m = /^hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/.exec(v);
+    if (m) { h = +m[1]; sat = +m[2]; l = +m[3]; }
+    else {
+      // ARMADILHA: o tom "paper" (o neutro das duas rampas) é HEX, não hsl.
+      // Sem converter, o sombreamento virava no-op JUSTO no padrão de fábrica
+      // — cortina creme sobre folha creme, e "aberta" idêntica a "fechada".
+      const x = /^#([0-9a-f]{6})$/i.exec(v);
+      if (!x) return col;
+      const n = parseInt(x[1], 16);
+      const R = ((n >> 16) & 255) / 255, G = ((n >> 8) & 255) / 255, B = (n & 255) / 255;
+      const mx = Math.max(R, G, B), mn = Math.min(R, G, B), d = mx - mn;
+      l = (mx + mn) / 2 * 100;
+      sat = d === 0 ? 0 : (d / (1 - Math.abs((mx + mn) - 1))) * 100;
+      h = d === 0 ? 0 : 60 * (mx === R ? ((G - B) / d + (G < B ? 6 : 0)) : mx === G ? (B - R) / d + 2 : (R - G) / d + 4);
+    }
+    // Teto de saturação em 30%: um creme quase branco tem S alto de verdade
+    // (#fdfaf3 dá 71%), e escurecê-lo sem teto devolve um amarelo de aviso em
+    // vez de papel. A rampa da casa nunca passa de 30 — o pano fica na família.
+    return "hsl(" + h.toFixed(0) + ", " + clamp(sat + (ds || 0), 0, 30).toFixed(0) +
+      "%, " + clamp(l + dl, 3, 97).toFixed(0) + "%)";
+  };
 
   // Tecidos: a prega É o próprio gradiente do pano. Como ele acompanha a caixa
   // do painel, franzir a cortina estreita as pregas sozinho — que é o que o
@@ -526,7 +566,7 @@
     invert_position: false,
     // cena
     scene_mode: "pictograma",
-    scene_height: 170,
+    scene_height: 260,
     panes: "auto",
     pane_run: "left",
     frame_tone: "auto",
@@ -755,7 +795,7 @@
 
     getCardSize() {
       const c = this._config || DEFAULTS;
-      const scene = c.scene_mode === "none" ? 0 : numOr(c.scene_height, 170) / 50;
+      const scene = c.scene_mode === "none" ? 0 : numOr(c.scene_height, 260) / 50;
       return Math.max(2, Math.round(scene + (c.controls === "none" ? 1 : 2.5)));
     }
 
@@ -895,6 +935,11 @@
 
       const defs = [];
       const body = [];
+      // A folha que corre precisa de recorte SEMPRE, não só na paisagem: sem
+      // ele o vidro desliza para fora da esquadria e aparece um retângulo
+      // pálido flutuando ao lado da janela.
+      defs.push('<clipPath id="clipGlass"><rect x="' + GL.x + '" y="' + GL.y +
+        '" width="' + GL.w + '" height="' + GL.h + '" rx="2"/></clipPath>');
 
       /* céu — no pictograma é uma parada só, chapada; na paisagem, três */
       if (pict) {
@@ -924,7 +969,6 @@
         body.push(this._skyline(c.scenery_skyline, dark));
         body.push(this._fx());
         body.push("</g>");
-        defs.push('<clipPath id="clipGlass"><rect x="' + GL.x + '" y="' + GL.y + '" width="' + GL.w + '" height="' + GL.h + '" rx="2"/></clipPath>');
       }
 
       /* folhas de vidro que correm */
@@ -941,12 +985,12 @@
       } else {
         panes.push(mk(0, "calc(var(--t1) * -1)"), mk(1, "0px"));
       }
-      body.push('<g class="panes">' + panes.join("") + "</g>");
+      body.push('<g class="panes" clip-path="url(#clipGlass)">' + panes.join("") + "</g>");
 
       /* montantes e esquadria */
       body.push('<g class="frame" fill="none">' +
         '<rect x="' + FR.x + '" y="' + FR.y + '" width="' + FR.w + '" height="' + FR.h +
-        '" rx="3" stroke="var(--fr-a)" stroke-width="' + FR.t + '"/>' +
+        '" rx="3" stroke="var(--fr-b)" stroke-width="' + FR.t + '"/>' +
         '<rect x="' + (FR.x + FR.t / 2) + '" y="' + (FR.y + FR.t / 2) + '" width="' + (FR.w - FR.t) +
         '" height="' + (FR.h - FR.t) + '" rx="2" stroke="var(--fr-c)" stroke-width="1" opacity=".55"/>' +
         '<line x1="' + (GL.x + GL.w / 2) + '" y1="' + GL.y + '" x2="' + (GL.x + GL.w / 2) + '" y2="' + (GL.y + GL.h) +
@@ -956,10 +1000,13 @@
       /* riscos de sensor — desenhados DEPOIS do pano, senão a cortina os come */
       let lines = "";
       if (c.show_sensors && (c.sensor_left || c.sensor_right)) {
-        if (c.sensor_left) lines += '<line class="sens s-l" x1="' + (GL.x + 4) + '" y1="' + (GL.y + 6) +
-          '" x2="' + (GL.x + 4) + '" y2="' + (GL.y + GL.h - 6) + '"/>';
-        if (c.sensor_right) lines += '<line class="sens s-r" x1="' + (GL.x + GL.w - 4) + '" y1="' + (GL.y + 6) +
-          '" x2="' + (GL.x + GL.w - 4) + '" y2="' + (GL.y + GL.h - 6) + '"/>';
+        // Marca curta no meio da guia. Barra do tamanho do vidro competia com
+        // a cortina e lia como "néon", não como sensor.
+        const y1 = GL.y + GL.h * 0.36, y2 = GL.y + GL.h * 0.64;
+        if (c.sensor_left) lines += '<line class="sens s-l" x1="' + (FR.x + FR.t / 2) + '" y1="' + y1.toFixed(1) +
+          '" x2="' + (FR.x + FR.t / 2) + '" y2="' + y2.toFixed(1) + '"/>';
+        if (c.sensor_right) lines += '<line class="sens s-r" x1="' + (FR.x + FR.w - FR.t / 2) + '" y1="' + y1.toFixed(1) +
+          '" x2="' + (FR.x + FR.w - FR.t / 2) + '" y2="' + y2.toFixed(1) + '"/>';
       }
 
       /* blackout: ripas que descem por scaleY */
@@ -991,7 +1038,10 @@
       /* peitoril */
       body.push('<rect class="sill" x="' + SILL.x + '" y="' + SILL.y + '" width="' + SILL.w + '" height="' + SILL.h + '" rx="2"/>');
 
-      return '<div class="scene" style="--sh:' + numOr(c.scene_height, 170) + 'px">' +
+      // O SVG toma a largura da coluna e a altura sai da proporção (scene_height
+      // vira teto, não medida). Com height fixa o desenho ficava com uma tarja
+      // vazia de cada lado — a janela parecia um selo no meio do card.
+      return '<div class="scene" style="--sh:' + numOr(c.scene_height, 260) + 'px">' +
         '<svg viewBox="' + vb + '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
         "<defs>" + defs.join("") + "</defs>" + body.join("") + "</svg></div>";
     }
@@ -1000,10 +1050,10 @@
     _pleatGrad(c, dark, tex) {
       const key = c.curtain_paper || c.paper;
       const d = c.curtain_paper ? c.curtain_dark === true : dark;
-      const [a, b] = this._stops(key, d);
+      const [a, b] = this._stops(key, d, c.curtain_paper ? 0 : (d ? 9 : -14));
       // No pictograma o pano é ícone, não tecido: metade das paradas basta e
       // o desenho inteiro cabe no orçamento de nós que o modo promete.
-      const n = c.scene_mode === "pictograma" ? Math.max(3, Math.round(tex.pleat / 2)) : tex.pleat;
+      const n = c.scene_mode === "pictograma" ? Math.max(4, Math.round(tex.pleat / 2)) : tex.pleat;
       const out = [];
       for (let i = 0; i <= n; i++) {
         const off = (i / n * 100).toFixed(1);
@@ -1015,7 +1065,7 @@
     _slatGrad(c, dark) {
       const key = c.blackout_paper || c.paper;
       const d = c.blackout_paper ? c.blackout_dark === true : dark;
-      const [a, b] = this._stops(key, d);
+      const [a, b] = this._stops(key, d, c.blackout_paper ? 0 : (d ? -4 : -34));
       const n = c.scene_mode === "pictograma" ? 6 : 12;
       const out = [];
       for (let i = 0; i <= n; i++) out.push('<stop offset="' + (i / n * 100).toFixed(1) + '%" stop-color="' + (i % 2 ? a : b) + '"/>');
@@ -1023,10 +1073,13 @@
     }
 
     // O papel é um linear-gradient CSS; o SVG precisa das duas cores soltas.
-    _stops(key, dark) {
+    // `dl` afasta o pano da folha quando ele não tem tom próprio.
+    _stops(key, dark, dl) {
       const g = dark ? paperDarkGradient(key) : paperGradient(key);
       const m = g.match(/(hsl\([^)]*\)|#[0-9a-f]{3,8})/gi);
-      return m && m.length >= 2 ? [m[0], m[1]] : ["#e8e3d8", "#cfc9bb"];
+      const pair = m && m.length >= 2 ? [m[0], m[1]] : (dark ? ["#2b2825", "#161411"] : ["#e8e3d8", "#cfc9bb"]);
+      if (!dl) return pair;
+      return [shade(pair[0], dl, 3), shade(pair[1], dl, 3)];
     }
 
     _skyline(kind, dark) {
@@ -1097,8 +1150,11 @@
       return out.length ? Array.from(new Set(out)).sort((a, b) => a - b) : [0, 50, 100];
     }
 
-    _piece(a, k, icon, label, extra) {
+    // `alt` é o rótulo do estado ligado. Um botão que diz "Ligar" quando a
+    // coisa já está ligada é a mentira mais fácil de cometer num card.
+    _piece(a, k, icon, label, extra, alt) {
       return '<button type="button" class="mwp-k" data-a="' + a + '" data-k="' + k + '"' +
+        (alt ? ' data-loff="' + esc(label) + '" data-lon="' + esc(alt) + '"' : "") +
         (extra || "") + ' aria-label="' + esc(label) + '">' +
         '<ha-icon icon="' + icon + '"></ha-icon>' +
         (this._config.control_labels ? '<span class="kl">' + esc(label) + "</span>" : "") +
@@ -1126,7 +1182,8 @@
       if (!live.length && !c.exhaust) return "";
       const compact = c.controls === "compact";
       const rows = live.map((t) => {
-        return '<div class="ctl" data-k="' + t.k + '">' +
+        const rg = c.slider_style === "regua";
+        return '<div class="ctl' + (rg ? " hasrg" : "") + '" data-k="' + t.k + '">' +
           '<div class="chead">' +
           '<ha-icon class="ci" icon="' + t.icon + '"></ha-icon>' +
           '<span class="cn">' + esc(t.label) + "</span>" +
@@ -1144,7 +1201,7 @@
         rows.push('<div class="ctl" data-k="exh">' +
           '<div class="chead"><ha-icon class="ci" icon="mdi:fan"></ha-icon>' +
           '<span class="cn">Exaustor</span><span class="cp" data-p="exh">--</span></div>' +
-          '<div class="cbar">' + this._piece("toggle", "exh", "mdi:fan", "Ligar") + "</div></div>");
+          '<div class="cbar">' + this._piece("toggle", "exh", "mdi:fan", "Ligar", "", "Desligar") + "</div></div>");
       }
       return '<div class="ctls' + (compact ? " compact" : "") + '">' + rows.join("") + "</div>";
     }
@@ -1162,15 +1219,15 @@
       const all = live.length > 1;
       const extra = all
         ? '<div class="rall">' +
-          this._piece("all-open", "all", "mdi:arrow-expand-all", "Abrir tudo") +
-          this._piece("all-close", "all", "mdi:arrow-collapse-all", "Fechar tudo") +
+          this._piece("all-open", "all", "mdi:arrow-expand-all", "Abrir tudo", ' data-wide="1"') +
+          this._piece("all-close", "all", "mdi:arrow-collapse-all", "Fechar tudo", ' data-wide="1"') +
           "</div>"
         : "";
       return '<div class="ctls room">' +
         '<div class="rtiles">' + tiles.join("") + "</div>" + extra +
         (c.slider_style === "none" || !live.length ? "" :
           '<div class="rslid">' + live.map((t) =>
-            '<div class="ctl" data-k="' + t.k + '">' +
+            '<div class="ctl' + (c.slider_style === "regua" ? " hasrg" : "") + '" data-k="' + t.k + '">' +
             '<div class="chead"><ha-icon class="ci" icon="' + t.icon + '"></ha-icon>' +
             '<span class="cn">' + esc(t.label) + '</span><span class="cp" data-p="' + t.k + '">--</span></div>' +
             this._ruler(c, t.k, t.label) + "</div>").join("") + "</div>") +
@@ -1220,13 +1277,15 @@
         ".bdg ha-icon{--mdc-icon-size:13px;}" +
 
         /* cena */
-        ".scene{position:relative;height:var(--sh);contain:layout paint style;}" +
-        ".scene svg{width:100%;height:100%;display:block;}" +
+        ".scene{position:relative;contain:layout paint style;}" +
+        ".scene svg{width:100%;height:auto;max-height:var(--sh);display:block;margin:0 auto;}" +
         ".glass{transition:none;}" +
         ".pane{fill:rgba(190,215,235,.16);stroke:rgba(255,255,255,.22);stroke-width:.7;" +
         "transform:translateX(var(--tv));transition:transform .45s ease;}" +
         ".frame{}" +
-        ".sill{fill:var(--fr-b);}" +
+        // O peitoril é apoio, não protagonista: cheio de fr-b ele virava uma
+        // barra clara atravessando o card de papel escuro.
+        ".sill{fill:var(--fr-c);opacity:.75;}" +
         ".rod{fill:var(--fr-c);}" +
         ".stars{opacity:var(--night,0);transition:opacity .6s ease;}" +
         ".sun{fill:var(--sun-c,#ffd98a);opacity:var(--sun-o,1);" +
@@ -1235,8 +1294,8 @@
         ".cur-l{transform:scaleX(var(--cl));}" +
         ".cur-r{transform-origin:right center;transform:scaleX(var(--cr));}" +
         ".bo{transform-origin:top center;transform:scaleY(var(--bo));transition:transform .5s ease;}" +
-        ".sens{stroke:#36c07a;stroke-width:3;stroke-linecap:round;opacity:.85;}" +
-        ".sens.open{stroke:#e0a23f;}" +
+        ".sens{stroke:#36c07a;stroke-width:3.5;stroke-linecap:round;opacity:.9;}" +
+        ".sens.open{stroke:#e0a23f;opacity:.9;}" +
         ".sens.dead{stroke:var(--dim);opacity:.4;}" +
         // Efeito no vidro: tudo desenhado uma vez, ligado por classe. Nada
         // aqui anima — gota que cai custa um quadro inteiro por gota.
@@ -1254,8 +1313,13 @@
         "text-overflow:ellipsis;white-space:nowrap;}" +
         ".cp{font-size:12.5px;font-weight:700;color:var(--dim);" +
         "font-variant-numeric:tabular-nums;flex:0 0 auto;}" +
-        ".cbar{display:flex;gap:8px;}" +
+        // Em coluna larga os botões repartem a linha em vez de ficarem encolhidos
+        // num canto; o teto de 116 px impede a peça de virar um outdoor.
+        ".cbar{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(44px,116px);gap:8px;}" +
+        ".cbar .mwp-k{width:100%;}" +
         ".ctl.dead{opacity:.45;}" +
+        // O % já aparece dentro da régua; repetir 10 px acima é ruído.
+        ".ctl.hasrg .chead .cp{display:none;}" +
         ".ctl.moving .cp{color:var(--ink);}" +
         // Compacto tira o rótulo, não o tamanho: alvo pequeno é o defeito que
         // este card nasceu para consertar.
@@ -1267,6 +1331,10 @@
         ".ctls.room{gap:10px;}" +
         ".rtiles{display:flex;flex-wrap:wrap;gap:8px;}" +
         ".rall{display:flex;gap:8px;}" +
+        // "Fechar tudo" não cabe num quadrado de 56 px — e rótulo cortado
+        // ("Fechar t...") num botão que fecha a casa inteira é perigoso.
+        '.mwp-k[data-wide]{width:auto;min-width:' + Math.max(96, Math.round(size * 1.7)) + 'px;padding:0 10px;}' +
+        ".mwp-k[data-wide] .kl{max-width:none;}" +
         ".rslid{display:grid;gap:8px;}" +
         ".root .mwp-k[data-room] .kl{max-width:" + Math.round(size * 1.15) + "px;}" +
 
@@ -1582,7 +1650,15 @@
         ex.classList.toggle("dead", !!r.exh.dead);
         const cp = ex.querySelector(".cp");
         if (cp) cp.textContent = r.exh.dead ? "--" : r.exh.on ? "ligado" : "desligado";
-        ex.querySelectorAll(".mwp-k").forEach((b) => b.classList.toggle("off", !r.exh.on));
+        ex.querySelectorAll(".mwp-k").forEach((b) => {
+          b.classList.toggle("off", !r.exh.on);
+          const lab = r.exh.on ? b.dataset.lon : b.dataset.loff;
+          if (lab) {
+            b.setAttribute("aria-label", lab);
+            const kl = b.querySelector(".kl");
+            if (kl && kl.textContent !== lab) kl.textContent = lab;
+          }
+        });
       }
       // No modo ambiente as peças ficam fora de .ctl — pintar pelo data-k.
       if (c.room_mode) {

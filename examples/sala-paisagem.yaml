@@ -1,0 +1,15 @@
+# A sala: 4 folhas, DOIS empurradores, e a paisagem ligada.
+type: custom:mw-window-curtain-paper-card
+name: Janela da sala
+area: sala
+scene_mode: paisagem
+panes: "4"
+opener: cover.janela_esquerda_da_sala
+opener_right: cover.janela_direita_da_sala
+curtain: cover.cortina_da_sala
+blackout: cover.blackout_da_sala
+sensor_left: binary_sensor.janela_esquerda_da_sala
+sensor_right: binary_sensor.janela_direita_da_sala
+temperature: sensor.temperatura_da_janela_da_sala
+humidity: sensor.umidade_da_janela_da_sala
+paper: orange-2

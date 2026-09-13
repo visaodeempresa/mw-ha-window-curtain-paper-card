@@ -1,0 +1,9 @@
+# A suíte: uma janela de 2 folhas, cortina, sem blackout.
+type: custom:mw-window-curtain-paper-card
+name: Janela da suíte
+area: suite
+opener: cover.0xbc026efffe0b49f4
+curtain: cover.cortina_da_suite
+exhaust: fan.exaustor_da_suite
+temperature: sensor.temperatura_da_janela_da_suite
+humidity: sensor.umidade_da_janela_da_suite

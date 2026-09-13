@@ -1,0 +1,9 @@
+# Modo ambiente: tudo do cômodo numa fileira de peças grandes.
+type: custom:mw-window-curtain-paper-card
+name: SUÍTE
+room_mode: true
+area: suite
+scene_mode: none
+opener: cover.0xbc026efffe0b49f4
+curtain: cover.cortina_da_suite
+exhaust: fan.exaustor_da_suite

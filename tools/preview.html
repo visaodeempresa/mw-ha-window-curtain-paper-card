@@ -1,0 +1,91 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MW Window / Curtain Paper Card — bancada</title>
+<!--
+  Bancada de desenho. NÃO é o Home Assistant: ha-card e ha-icon aqui são
+  dublês de duas linhas e o hass é de mentira. Serve para olhar a peça de
+  papel em todos os estados sem depender do HA.
+
+  ARMADILHA: não abre por file:// — o pane de browser serve arquivo de fora do
+  projeto como snapshot data: e o <script src="../dist/..."> morre em silêncio
+  (console VAZIO, customElements.get() = undefined). Sirva por HTTP:
+  entrada `mw-window-curtain-paper-preview` na porta 8793 do
+  PROJECTS/.claude/launch.json (a da RAIZ, não a do repo).
+
+  Parâmetros: ?tema=escuro  ?largura=390
+-->
+<style>
+  :root{--primary-color:#03a9f4;}
+  body{margin:0;padding:16px;background:#20242b;color:#dfe3e8;
+    font:13px/1.4 -apple-system,system-ui,sans-serif;}
+  body.claro{background:#eef0f3;color:#22262c;}
+  h1{font-size:14px;letter-spacing:1.2px;text-transform:uppercase;opacity:.62;margin:0 0 4px;}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 16px;}
+  .bar button{min-height:34px;padding:0 12px;border-radius:8px;cursor:pointer;
+    border:1px solid rgba(127,127,127,.4);background:transparent;color:inherit;font:inherit;}
+  .bar button.on{border-color:var(--primary-color);background:rgba(3,169,244,.12);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--col,340px),1fr));gap:16px;align-items:start;}
+  .cap{font-size:11px;opacity:.62;margin:0 0 6px 2px;letter-spacing:.4px;}
+</style>
+<h1>MW Window / Curtain Paper Card — bancada</h1>
+<div class="bar">
+  <button data-t="escuro">tema escuro</button>
+  <button data-t="claro">tema claro</button>
+  <span style="opacity:.4">|</span>
+  <button data-w="340">coluna 340</button>
+  <button data-w="260">coluna 260 (estreita)</button>
+  <button data-w="600">coluna 600</button>
+</div>
+<div class="grid" id="grid"></div>
+
+<!-- o card primeiro: os dublês e os cenários dependem dele já estar definido -->
+<script src="../dist/mw-window-curtain-paper-card.js"></script>
+<script>
+</script>
+<script src="stubs.js"></script>
+<script>
+const CENAS = [
+  ["pictograma · o padrão", {}],
+  ["paisagem · a cena inteira", { scene_mode: "paisagem", name: "Janela da suíte (paisagem)" }],
+  ["sem desenho · só os controles", { scene_mode: "none", name: "Suíte — só comandos" }],
+  ["modo ambiente · tudo de uma vez", { room_mode: true, exhaust: "fan.exaustor", name: "SUÍTE" }],
+  ["sala · 4 folhas e dois empurradores", {
+    opener: "cover.op_l", opener_right: "cover.op_r", panes: "4",
+    name: "Janela da sala", paper: "orange-3",
+  }],
+  ["papel escuro", { paper_dark: true, paper: "indigo-5", name: "Janela de noite" }],
+  ["peça de 76 px", { control_size: 76, name: "Alvo grande" }],
+  ["compacta, sem rótulo", { controls: "compact", control_labels: false, name: "Compacta" }],
+  ["barra simples em vez de régua", { slider_style: "barra", name: "Barra" }],
+  ["entidade morta", { opener: "cover.morto", curtain: "", blackout: "", name: "Fora do ar" }],
+  ["exaustor junto", { exhaust: "fan.exaustor", name: "Com exaustor" }],
+  ["sem relevo (chapado)", { depth: "flat", control_style: "chapado", name: "Chapado" }],
+];
+
+const grid = document.getElementById("grid");
+CENAS.forEach(([cap, over]) => {
+  const cell = document.createElement("div");
+  cell.innerHTML = '<div class="cap">' + cap + "</div>";
+  const card = document.createElement("mw-window-curtain-paper-card");
+  card.setConfig(Object.assign({}, BASE, over));
+  card.hass = HASS;
+  cell.appendChild(card);
+  grid.appendChild(cell);
+});
+
+/* ---------------- barra de controle da bancada ---------------- */
+const q = new URLSearchParams(location.search);
+const tema = (t) => {
+  document.body.classList.toggle("claro", t === "claro");
+  document.querySelectorAll("[data-t]").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
+};
+const larg = (w) => {
+  document.documentElement.style.setProperty("--col", w + "px");
+  document.querySelectorAll("[data-w]").forEach((b) => b.classList.toggle("on", b.dataset.w === String(w)));
+};
+document.querySelectorAll("[data-t]").forEach((b) => b.addEventListener("click", () => tema(b.dataset.t)));
+document.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => larg(+b.dataset.w)));
+tema(q.get("tema") || "escuro");
+larg(+(q.get("largura") || 340));
+</script>
