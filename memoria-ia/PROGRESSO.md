@@ -17,9 +17,9 @@
 | 7 | Editor: 6 abas, prévia, 3 grades de 50 amostras, montar sozinho | ✅ |
 | 8 | Bancada + README + marca | ✅ |
 | 9 | Auditoria do `inspetor-de-design` | ⬜ |
-| 10 | Implantação no HA (`.js` **e** `.js.gz`) + recurso Lovelace | ⬜ |
-| 11 | Vitrine `/mw-components` (aba nova) | ⬜ |
-| 12 | Harness: knowledge, ADR, skill, CHANGELOG, memória | ⬜ |
+| 10 | Implantação no HA (`.js` **e** `.js.gz`) + recurso Lovelace | ✅ shasum bate nos 3 |
+| 11 | Vitrine `/mw-components` (aba nova) | ✅ 12 views, 28 cards na aba |
+| 12 | Harness: knowledge, ADR, skill, CHANGELOG, memória | ✅ `make check` verde |
 | 13 | PR para `develop` | ⬜ |
 
 ## Verificação já passando
@@ -41,5 +41,19 @@ botão do exaustor dizendo «Ligar» com o exaustor ligado.
 
 ## Ainda não verificado
 
-- **Nada foi para o HA ainda** — o card não está no `lovelace/resources`.
-- A auditoria do `inspetor-de-design` ainda não rodou.
+- A auditoria do `inspetor-de-design` estava rodando quando isto foi escrito.
+- **A conferência na tela do HA de verdade é do dono** — o que está provado
+  daqui é que o byte servido é o byte do `dist/` (shasum igual no `.js`, no
+  `.js.gz` e no que o HA entrega comprimido), que o recurso está em
+  `lovelace/resources` e que o deploy da vitrine gravou 12 views.
+
+## No ar
+
+| onde | o quê |
+|---|---|
+| `/config/www/community/mw-ha-window-curtain-paper-card/` | `.js` **e** `.js.gz`, shasum `5dbbefe7…` |
+| `lovelace/resources` | `…/mw-window-curtain-paper-card.js?v=5dbbefe7` (module) |
+| `/mw-components/janelas-papel` | 7 seções, 28 cards, entidades reais da suíte e da sala |
+
+Isto é **deploy de teste por SSH**, não release. O HACS só verá versão nova
+depois do merge na `main` — e o merge é do dono.
