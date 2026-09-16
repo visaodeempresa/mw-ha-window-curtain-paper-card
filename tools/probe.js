@@ -180,7 +180,7 @@ const el = build();
 const html = el.shadowRoot.innerHTML;
 ok("montou o shadow DOM", html.length > 2000, html.length + " bytes");
 const body = bodyOf(html);
-ok("tem ha-card", /<ha-card class="root">/.test(body));
+ok("tem ha-card", /<ha-card class="root"/.test(body));
 ok("tem peças de papel", (body.match(/class="mwp-k"/g) || []).length >= 6,
   (body.match(/class="mwp-k"/g) || []).length + " peças");
 ok("tem régua", /class="mwp-rg"/.test(body));
@@ -236,6 +236,15 @@ comSens.hass = hass;
 ok("estado do sensor entra no resumo em palavra",
   /esquerda (aberta|fechada)/.test(comSens._summary(comSens._read())),
   comSens._summary(comSens._read()));
+// A cena é aria-hidden, e aria-hidden poda a subárvore inteira: o <title>
+// do SVG NÃO chega ao leitor de tela. Quem carrega o estado é o rótulo do
+// card — e ele tem de existir mesmo sem cabeçalho.
+ok("card tem rótulo acessível com o estado", /role="group" aria-label=/.test(body));
+const semCab = build({ show_header: false });
+semCab.hass = hass;
+ok("rótulo existe mesmo sem cabeçalho",
+  (semCab._el.root.getAttribute("aria-label") || "").indexOf("esquerda") > -1,
+  semCab._el.root.getAttribute("aria-label"));
 ok("sem dado usa travessão, não dois hifens", body.indexOf("—") > -1 && !/>--</.test(body));
 ok("control_style chapado achata a PEÇA, não só o cartão",
   /\.mwp-k,\.mwp-k\.off[^}]*box-shadow:none/.test(cssOf(build({ control_style: "chapado" }).shadowRoot.innerHTML)));

@@ -58,6 +58,10 @@ dono tem outros planos para essa linha — herdar do irmão prenderia os dois.
 | Botão diz «Ligar» com a coisa ligada | rótulo estático | `data-lon`/`data-loff` pintados em `_paintControls` |
 | `node 24`: «Cannot set property navigator» | `navigator` virou getter | `Object.defineProperty` no probe |
 | Card diz que mandou o comando e nada acontece | `.js.gz` velho continua sendo servido | subir `.js` **E** `.js.gz` |
+| Conserto certo, medida errada (44×42 depois de consertar para 44×44) | a bancada servia o `.js` do cache | `preview.html`/`vitrine.html` carimbam `?v=Date.now()` na URL do script |
+| `<title>` no SVG não chega ao leitor de tela | a cena é `aria-hidden="true"`, e isso poda a subárvore **inteira** da árvore de acessibilidade | o canal que vale é o `aria-label` do `.root` (existe mesmo com `show_header: false`); o `<title>` é conforto de mouse |
+| Halo de foco "consertado" e ainda reprovando | `rgba(0,0,0,.38)` sobre papel creme dá **2,65:1** | `.55` → 4,64:1 claro e 5,84:1 escuro — **medir**, não deduzir |
+| Vinco da régua esticado | estava dentro do `.rgf`, que anda por `scaleX` | virou irmão (`.rgk`) andando por `translateX` com a régua de `container-type` |
 
 ## 5. Blocos embutidos
 

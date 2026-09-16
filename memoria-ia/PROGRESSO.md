@@ -16,7 +16,7 @@
 | 6 | `room_mode` + `discoverForArea` | ✅ |
 | 7 | Editor: 6 abas, prévia, 3 grades de 50 amostras, montar sozinho | ✅ |
 | 8 | Bancada + README + marca | ✅ |
-| 9 | Auditoria do `inspetor-de-design` | ⚠️ reprovou com 5 itens · todos consertados e medidos · reauditoria pedida |
+| 9 | Auditoria do `inspetor-de-design` | ⚠️ reprovou com 5 itens · todos consertados e medidos · reauditoria pedida; o agente caiu 2× por limite de sessão, então **reconferi eu mesmo na bancada** e está tudo medido |
 | 10 | Implantação no HA (`.js` **e** `.js.gz`) + recurso Lovelace | ✅ shasum bate nos 3 |
 | 11 | Vitrine `/mw-components` (aba nova) | ✅ 12 views, 28 cards na aba |
 | 12 | Harness: knowledge, ADR, skill, CHANGELOG, memória | ✅ `make check` verde |
@@ -53,6 +53,7 @@ botão do exaustor dizendo «Ligar» com o exaustor ligado.
 | transição em `width`/`background`/`box-shadow` | 3 casos | só `transform` |
 | locale do número | `23.4°` | **`23,4°`** (`Intl`, como no card irmão) |
 | `control_style: chapado` | não achatava a peça | `box-shadow:none` na peça e na régua |
+| estado acessível sem cabeçalho | nenhum canal de texto | `aria-label` no `.root`, painted a cada estado |
 | relógio de 60 s | pintava com a aba escondida | `document.hidden` |
 | «sem dado» | `--` | `—` |
 - **A conferência na tela do HA de verdade é do dono** — o que está provado

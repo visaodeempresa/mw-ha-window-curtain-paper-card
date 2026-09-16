@@ -918,7 +918,12 @@
       this._root = this.shadowRoot || this.attachShadow({ mode: "open" });
       this._root.innerHTML =
         "<style>" + this._css(c, dark, ink, bg, fr, tex) + "</style>" +
-        '<ha-card class="root">' +
+        // O canal acessível do estado é ESTE rótulo, não o <title> do SVG: a
+        // cena é aria-hidden, e aria-hidden poda a subárvore INTEIRA da árvore
+        // de acessibilidade — o <title> lá dentro é conforto de mouse e nada
+        // mais. O rótulo aqui funciona mesmo com show_header: false, que é
+        // justamente quando o resumo não existe para ser lido.
+        '<ha-card class="root" role="group" aria-label="">' +
         (c.show_header ? this._header(c, title) : "") +
         (c.scene_mode === "none" ? "" : this._scene(c, dark, fr, tex, r)) +
         (c.room_mode ? this._roomBar(c, h) : this._controls(c)) +
@@ -932,6 +937,7 @@
       this._skyStops = null;
       this._sig = null;
       this._dragging = null;
+      this._rotulo = null;
 
       this._el = {
         title: this._root.querySelector(".title"),
@@ -942,6 +948,7 @@
         bat: this._root.querySelector(".v-bat"),
         batIcon: this._root.querySelector(".i-bat"),
         glass: this._root.querySelector(".glass"),
+        root: this._root.querySelector(".root"),
       };
       this._wire();
       this._paint(true);
@@ -1668,9 +1675,15 @@
       }
 
       this._paintControls(r, dk);
+      const resumo = this._summary(r);
       if (c.show_header) {
-        if (this._el.summary) this._el.summary.textContent = this._summary(r);
+        if (this._el.summary) this._el.summary.textContent = resumo;
         this._badges(c, r);
+      }
+      if (this._el.root) {
+        const rot = (c.name || friendly(this._hass, c.opener || c.curtain || c.blackout || c.exhaust)
+          || "Janela") + (resumo ? ": " + resumo : "");
+        if (rot !== this._rotulo) { this._rotulo = rot; this._el.root.setAttribute("aria-label", rot); }
       }
     }
 
