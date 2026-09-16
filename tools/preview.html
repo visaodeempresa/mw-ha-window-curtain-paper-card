@@ -40,7 +40,12 @@
 <div class="grid" id="grid"></div>
 
 <!-- o card primeiro: os dublês e os cenários dependem dele já estar definido -->
-<script src="../dist/mw-window-curtain-paper-card.js"></script>
+<!-- ARMADILHA: o navegador guarda o .js da bancada e mostra o card de
+     ontem sem avisar — o sintoma é medir 44x42 depois de consertar para
+     44x44. document.write mantém a ordem síncrona (o card tem de existir
+     antes dos dublês) e carimba a hora, então a bancada é sempre o disco. -->
+<script>document.write('<script src="../dist/mw-window-curtain-paper-card.js?v='
+  + Date.now() + '"><\/script>');</script>
 <script>
 </script>
 <script src="stubs.js"></script>

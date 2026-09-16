@@ -218,6 +218,30 @@ const pai = nodes(svgOf(build({ scene_mode: "paisagem" }).shadowRoot.innerHTML))
 ok("pictograma custa menos de 1/3 da paisagem", pic * 3 < pai, pic + " nós contra " + pai);
 ok("scene_mode none não desenha nada", !svgOf(build({ scene_mode: "none" }).shadowRoot.innerHTML));
 
+console.log("acessibilidade (o que a auditoria de 16/09 cobrou):");
+ok("movimento pede permissão do sistema",
+  css.indexOf("@media (prefers-reduced-motion: no-preference)") > -1);
+const trans = css.match(/transition:[^;}]*/g) || [];
+ok("nenhuma transição em propriedade cara", 
+  trans.every((t) => !/(background|box-shadow|width|height|left|top|margin|padding)/.test(t)),
+  trans.join(" | "));
+ok("degrau da régua tem 44 px nos dois eixos (o border não come)",
+  /\.rgs\{[^}]*top:-1px;bottom:-1px/.test(css));
+ok("anel de foco não depende só de --primary-color",
+  /:focus-visible\{[^}]*box-shadow:0 0 0 4\.5px/.test(css));
+// Cor sozinha não é canal: o sensor tem de dizer o estado em texto.
+ok("sensor de abertura tem <title>", /<title class="t-sl">/.test(body) && /<title class="t-sr">/.test(body));
+const comSens = build();
+comSens.hass = hass;
+ok("estado do sensor entra no resumo em palavra",
+  /esquerda (aberta|fechada)/.test(comSens._summary(comSens._read())),
+  comSens._summary(comSens._read()));
+ok("sem dado usa travessão, não dois hifens", body.indexOf("—") > -1 && !/>--</.test(body));
+ok("control_style chapado achata a PEÇA, não só o cartão",
+  /\.mwp-k,\.mwp-k\.off[^}]*box-shadow:none/.test(cssOf(build({ control_style: "chapado" }).shadowRoot.innerHTML)));
+ok("relógio respeita a aba escondida", src.indexOf("document.hidden") > -1);
+ok("número sai no locale do HA (como no card irmão)", src.indexOf("Intl.NumberFormat") > -1);
+
 console.log("pintura sem remontar:");
 const before = el.shadowRoot.innerHTML;
 el.hass = Object.assign({}, hass);

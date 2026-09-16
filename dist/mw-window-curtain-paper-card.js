@@ -327,11 +327,17 @@
       + "width:clamp(" + MWP_MIN_TOUCH + "px," + size + "px,28cqw);"
       + "height:clamp(" + MWP_MIN_TOUCH + "px," + size + "px,28cqw);"
       + "border-radius:" + rad + "px;cursor:pointer;padding:0;color:" + ink.text + ";"
-      + "transition:background .16s ease,box-shadow .16s ease,transform .1s ease;" + s.raised + "}"
+      + s.raised + "}"
       + ".mwp-k.off{" + s.sunken + "}"
       + ".mwp-k:active{" + s.pressedRaised + "}"
       + ".mwp-k.off:active{" + s.pressedSunken + "}"
-      + ".mwp-k:focus-visible{outline:2.5px solid var(--primary-color);outline-offset:2px;}"
+      // O anel não pode depender só de --primary-color: o azul padrão do HA
+      // sobre papel creme dá 2,39:1 (o piso de borda informativa é 3:1). O halo
+      // fixo por baixo garante o contraste em qualquer tema que o dono use.
+      // 0.55 e não 0.38: medido na bancada, 0.38 sobre papel creme dá 2,65:1 —
+      // ainda reprova. 0.55 dá 4,64:1 no claro e 5,84:1 no escuro.
+      + ".mwp-k:focus-visible,.mwp-rg:focus-visible{outline:2.5px solid var(--primary-color);"
+      + "outline-offset:2px;box-shadow:0 0 0 4.5px " + (o.dark ? "rgba(255,255,255,.55)" : "rgba(0,0,0,.55)") + ";}"
       + ".mwp-k[disabled]{opacity:.42;cursor:default;pointer-events:none;}"
       + ".mwp-k ha-icon{--mdc-icon-size:" + Math.round(size * 0.46) + "px;pointer-events:none;}"
       + ".mwp-k .kl{font-size:" + Math.max(8, Math.round(size * 0.17)) + "px;line-height:1;"
@@ -340,15 +346,18 @@
       // Régua: trilho afundado, trecho andado saliente, degrau é alvo de toque
       // inteiro (a marca é fina, o botão que a cobre não).
       + ".mwp-rg{position:relative;display:block;box-sizing:border-box;width:100%;"
+      + "container-type:inline-size;"
       + "min-height:" + MWP_MIN_TOUCH + "px;border-radius:" + Math.round(rad * 0.8) + "px;"
       + "cursor:pointer;padding:0;" + s.sunken + "}"
-      + ".mwp-rg:focus-visible{outline:2.5px solid var(--primary-color);outline-offset:2px;}"
       + ".mwp-rg[disabled]{opacity:.42;pointer-events:none;}"
       + ".mwp-rg .rgf{position:absolute;left:3px;top:3px;bottom:3px;pointer-events:none;"
-      + "width:calc((100% - 6px) * var(--rgp,0));border-radius:" + Math.round(rad * 0.6) + "px;"
-      + "transition:width .18s ease;" + s.raised + "}"
-      + ".mwp-rg.drag .rgf{transition:none;}"
-      + ".mwp-rg .rgs{position:absolute;top:0;bottom:0;width:" + MWP_MIN_TOUCH + "px;"
+      + "width:calc(100% - 6px);transform-origin:left center;transform:scaleX(var(--rgp,0));"
+      + "border-radius:" + Math.round(rad * 0.6) + "px;" + s.raised + "}"
+      + ".mwp-rg.drag .rgf,.mwp-rg.drag .rgk{transition:none;}"
+      // top/bottom em -1px: a régua tem border de 1px e box-sizing:border-box,
+      // então um filho em top:0;bottom:0 nasce 2px mais baixo que a caixa.
+      // Medido: 44x42. O piso é 44 nos DOIS eixos ou não é piso.
+      + ".mwp-rg .rgs{position:absolute;top:-1px;bottom:-1px;width:" + MWP_MIN_TOUCH + "px;"
       + "transform:translateX(-50%);background:none;border:0;padding:0;cursor:pointer;}"
       + ".mwp-rg .rgs::before{content:'';position:absolute;left:50%;top:22%;bottom:22%;width:2px;"
       + "transform:translateX(-50%);border-radius:1px;background:" + ink.text + ";opacity:.30;}"
@@ -356,10 +365,22 @@
       + ".mwp-rg .rgs:active::before{opacity:.75;}"
       // A ponta do trecho andado é um vinco, não uma borda: é o que conta ao
       // olho onde a régua "parou" sem depender de cor de destaque.
-      + ".mwp-rg .rgf::after{content:'';position:absolute;right:0;top:12%;bottom:12%;width:2px;"
-      + "border-radius:1px;background:" + (o.dark ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.22)") + ";}"
+      // Ele é IRMÃO do preenchimento, não filho: dentro do .rgf o scaleX
+      // esticaria o vinco de 2px junto. Anda por translateX (composto), com a
+      // régua servindo de container para o 100cqw valer a largura dela.
+      + ".mwp-rg .rgk{position:absolute;left:3px;top:12%;bottom:12%;width:2px;pointer-events:none;"
+      + "border-radius:1px;transform:translateX(calc(var(--rgp,0) * (100cqw - 6px)));"
+      + "background:" + (o.dark ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.22)") + ";}"
       // O número mora na ponta direita, não no meio: numa régua larga o valor
       // centralizado cai longe do vinco e o olho procura os dois.
+      // Só transform e opacity entram em transição, e só com o sistema
+      // permitindo. background e box-shadow animados redesenham a sombra a cada
+      // quadro — era o que a própria receita do papel manda evitar, e estava
+      // na transition da peça contradizendo o comentário dela.
+      + "@media (prefers-reduced-motion: no-preference){"
+      + ".mwp-k{transition:transform .1s ease;}"
+      + ".mwp-rg .rgf{transition:transform .18s ease;}"
+      + ".mwp-rg .rgk{transition:transform .18s ease;}}"
       + ".mwp-rg .rgv{position:absolute;inset:0;display:grid;place-items:center end;"
       + "padding-right:12px;box-sizing:border-box;"
       + "pointer-events:none;font-size:" + Math.max(10, Math.round(size * 0.2)) + "px;"
@@ -428,6 +449,15 @@
     const dead = st.state === "unavailable" || st.state === "unknown";
     return { on: !dead && st.state !== "off" && st.state !== "closed", dead, state: st.state };
   };
+  // O card irmão já formata pelo locale do HA; imprimir "23.4" com ponto numa
+  // casa pt-BR é regressão frente a um componente já aceito.
+  const nfmt = (hass, v, casas) => {
+    try {
+      return new Intl.NumberFormat((hass && hass.locale && hass.locale.language) || "pt-BR",
+        { minimumFractionDigits: casas, maximumFractionDigits: casas }).format(v);
+    } catch (_) { return v.toFixed(casas); }
+  };
+
   const batteryIcon = (p) => {
     if (p == null) return "mdi:battery-unknown";
     if (p >= 95) return "mdi:battery";
@@ -821,7 +851,11 @@
       }
       // A fase do dia muda sozinha; sem relógio o céu congela na hora em que
       // a aba foi aberta. Um minuto é o passo mais grosso que ninguém percebe.
-      if (!this._clock) this._clock = setInterval(() => { if (this._visible !== false) this._paint(true); }, 60000);
+      // IntersectionObserver só sabe de rolagem: com a ABA do navegador
+      // escondida o card continua na viewport e o relógio seguia pintando.
+      if (!this._clock) this._clock = setInterval(() => {
+        if (this._visible !== false && !document.hidden) this._paint(true);
+      }, 60000);
     }
 
     disconnectedCallback() {
@@ -891,7 +925,7 @@
         "</ha-card>";
 
       // ARMADILHA Nº 1: remontou o shadow DOM, zere TODA referência guardada.
-      // Sintoma de esquecer: um pedaço do card congela em "--" sem erro
+      // Sintoma de esquecer: um pedaço do card congela em travessão sem erro
       // nenhum no console, porque o nó guardado não está mais na árvore.
       this._ctlEls = null;
       this._roomEls = null;
@@ -1003,10 +1037,16 @@
         // Marca curta no meio da guia. Barra do tamanho do vidro competia com
         // a cortina e lia como "néon", não como sensor.
         const y1 = GL.y + GL.h * 0.36, y2 = GL.y + GL.h * 0.64;
+        // Verde/âmbar diz o estado, mas cor sozinha não é canal: o <title> dá o
+        // texto, e o resumo do cabeçalho repete em palavra. Regra da casa —
+        // cor de status anda com rótulo escrito junto.
+        // <title> vai DENTRO da própria <line>, não num <g> em volta: o
+        // wrapper custaria dois nós por sensor no pictograma, que é o modo
+        // cujo contrato é ser leve.
         if (c.sensor_left) lines += '<line class="sens s-l" x1="' + (FR.x + FR.t / 2) + '" y1="' + y1.toFixed(1) +
-          '" x2="' + (FR.x + FR.t / 2) + '" y2="' + y2.toFixed(1) + '"/>';
+          '" x2="' + (FR.x + FR.t / 2) + '" y2="' + y2.toFixed(1) + '"><title class="t-sl"></title></line>';
         if (c.sensor_right) lines += '<line class="sens s-r" x1="' + (FR.x + FR.w - FR.t / 2) + '" y1="' + y1.toFixed(1) +
-          '" x2="' + (FR.x + FR.w - FR.t / 2) + '" y2="' + y2.toFixed(1) + '"/>';
+          '" x2="' + (FR.x + FR.w - FR.t / 2) + '" y2="' + y2.toFixed(1) + '"><title class="t-sr"></title></line>';
       }
 
       /* blackout: ripas que descem por scaleY */
@@ -1173,7 +1213,7 @@
       return '<div class="mwp-rg" data-s="' + k + '" role="slider" tabindex="0"' +
         ' aria-label="' + esc("Posição de " + label) + '"' +
         ' aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">' +
-        '<div class="rgf"></div>' + marks + '<div class="rgv">--</div></div>';
+        '<div class="rgf"></div><div class="rgk"></div>' + marks + '<div class="rgv">—</div></div>';
     }
 
     _controls(c) {
@@ -1187,7 +1227,7 @@
           '<div class="chead">' +
           '<ha-icon class="ci" icon="' + t.icon + '"></ha-icon>' +
           '<span class="cn">' + esc(t.label) + "</span>" +
-          '<span class="cp" data-p="' + t.k + '">--</span>' +
+          '<span class="cp" data-p="' + t.k + '">—</span>' +
           "</div>" +
           this._ruler(c, t.k, t.label) +
           '<div class="cbar">' +
@@ -1200,7 +1240,7 @@
       if (c.exhaust) {
         rows.push('<div class="ctl" data-k="exh">' +
           '<div class="chead"><ha-icon class="ci" icon="mdi:fan"></ha-icon>' +
-          '<span class="cn">Exaustor</span><span class="cp" data-p="exh">--</span></div>' +
+          '<span class="cn">Exaustor</span><span class="cp" data-p="exh">—</span></div>' +
           '<div class="cbar">' + this._piece("toggle", "exh", "mdi:fan", "Ligar", "", "Desligar") + "</div></div>");
       }
       return '<div class="ctls' + (compact ? " compact" : "") + '">' + rows.join("") + "</div>";
@@ -1229,7 +1269,7 @@
           '<div class="rslid">' + live.map((t) =>
             '<div class="ctl' + (c.slider_style === "regua" ? " hasrg" : "") + '" data-k="' + t.k + '">' +
             '<div class="chead"><ha-icon class="ci" icon="' + t.icon + '"></ha-icon>' +
-            '<span class="cn">' + esc(t.label) + '</span><span class="cp" data-p="' + t.k + '">--</span></div>' +
+            '<span class="cn">' + esc(t.label) + '</span><span class="cp" data-p="' + t.k + '">—</span></div>' +
             this._ruler(c, t.k, t.label) + "</div>").join("") + "</div>") +
         "</div>";
     }
@@ -1281,19 +1321,19 @@
         ".scene svg{width:100%;height:auto;max-height:var(--sh);display:block;margin:0 auto;}" +
         ".glass{transition:none;}" +
         ".pane{fill:rgba(190,215,235,.16);stroke:rgba(255,255,255,.22);stroke-width:.7;" +
-        "transform:translateX(var(--tv));transition:transform .45s ease;}" +
+        "transform:translateX(var(--tv));}" +
         ".frame{}" +
         // O peitoril é apoio, não protagonista: cheio de fr-b ele virava uma
         // barra clara atravessando o card de papel escuro.
         ".sill{fill:var(--fr-c);opacity:.75;}" +
         ".rod{fill:var(--fr-c);}" +
-        ".stars{opacity:var(--night,0);transition:opacity .6s ease;}" +
+        ".stars{opacity:var(--night,0);}" +
         ".sun{fill:var(--sun-c,#ffd98a);opacity:var(--sun-o,1);" +
         "transform:translate(var(--sun-x,120px),var(--sun-y,40px));}" +
-        ".cur{transform-origin:left center;transition:transform .5s ease;}" +
+        ".cur{transform-origin:left center;}" +
         ".cur-l{transform:scaleX(var(--cl));}" +
         ".cur-r{transform-origin:right center;transform:scaleX(var(--cr));}" +
-        ".bo{transform-origin:top center;transform:scaleY(var(--bo));transition:transform .5s ease;}" +
+        ".bo{transform-origin:top center;transform:scaleY(var(--bo));}" +
         ".sens{stroke:#36c07a;stroke-width:3.5;stroke-linecap:round;opacity:.9;}" +
         ".sens.open{stroke:#e0a23f;opacity:.9;}" +
         ".sens.dead{stroke:var(--dim);opacity:.4;}" +
@@ -1302,8 +1342,22 @@
         ".fx{display:none;}" +
         ".fx-on.fx-rain .fx-rain,.fx-on.fx-dew .fx-dew,.fx-on.fx-cold .fx-cold,.fx-on.fx-hot .fx-hot{display:inline;}" +
 
+        // Movimento é enfeite: quem pediu menos movimento no sistema recebe o
+        // card inteiro parado, e ele continua contando o mesmo estado.
+        "@media (prefers-reduced-motion: no-preference){" +
+        ".pane{transition:transform .45s ease;}" +
+        ".cur,.bo{transition:transform .5s ease;}" +
+        ".stars{transition:opacity .6s ease;}}" +
+
         /* controles */
         mwpControlCss({ bg, dark, size, ink, radius: Math.max(8, Math.round(rad * 0.7)) }) +
+        // control_style: chapado promete "sem relevo" NO CONTROLE. Sem isto o
+        // editor prometia e só a moldura do cartão perdia a sombra — a peça
+        // saía byte a byte igual à do modo papel.
+        (c.control_style === "chapado"
+          ? ".mwp-k,.mwp-k.off,.mwp-k:active,.mwp-k.off:active{box-shadow:none;}"
+          + ".mwp-rg,.mwp-rg .rgf{box-shadow:none;}"
+          : "") +
         ".ctls{container-type:inline-size;display:grid;gap:9px;margin-top:9px;" +
         "padding-top:9px;border-top:1px solid var(--line);contain:layout style;}" +
         ".ctl{display:grid;gap:6px;}" +
@@ -1601,8 +1655,17 @@
 
       /* riscos de sensor */
       const sl = this._root.querySelector(".s-l"), sr = this._root.querySelector(".s-r");
-      if (sl && r.sl) { sl.classList.toggle("open", r.sl.on); sl.classList.toggle("dead", r.sl.dead); }
-      if (sr && r.sr) { sr.classList.toggle("open", r.sr.on); sr.classList.toggle("dead", r.sr.dead); }
+      const diz = (info) => (info.dead ? "sem contato" : info.on ? "aberto" : "fechado");
+      if (sl && r.sl) {
+        sl.classList.toggle("open", r.sl.on); sl.classList.toggle("dead", r.sl.dead);
+        const t = this._root.querySelector(".t-sl");
+        if (t) t.textContent = "Sensor esquerdo: " + diz(r.sl);
+      }
+      if (sr && r.sr) {
+        sr.classList.toggle("open", r.sr.on); sr.classList.toggle("dead", r.sr.dead);
+        const t = this._root.querySelector(".t-sr");
+        if (t) t.textContent = "Sensor direito: " + diz(r.sr);
+      }
 
       this._paintControls(r, dk);
       if (c.show_header) {
@@ -1625,7 +1688,7 @@
         if (dk === k) return;
         const v = info.pos == null ? null : info.pos;
         const cp = el.querySelector(".cp");
-        if (cp) cp.textContent = info.dead ? "--" : v == null ? (info.state === "open" ? "aberto" : "fechado") : v + "%";
+        if (cp) cp.textContent = info.dead ? "—" : v == null ? (info.state === "open" ? "aberto" : "fechado") : v + "%";
         const rg = el.querySelector(".mwp-rg");
         if (rg) {
           rg.style.setProperty("--rgp", ((v || 0) / 100).toFixed(3));
@@ -1633,7 +1696,7 @@
           rg.setAttribute("aria-valuetext", (v || 0) + "%");
           if (info.dead) rg.setAttribute("disabled", ""); else rg.removeAttribute("disabled");
           const rv = rg.querySelector(".rgv");
-          if (rv) rv.textContent = info.dead ? "--" : (v || 0) + "%";
+          if (rv) rv.textContent = info.dead ? "—" : (v || 0) + "%";
         }
         const cs = el.querySelector(".cs");
         if (cs && document.activeElement !== cs) cs.value = String(v || 0);
@@ -1649,7 +1712,7 @@
       if (ex) {
         ex.classList.toggle("dead", !!r.exh.dead);
         const cp = ex.querySelector(".cp");
-        if (cp) cp.textContent = r.exh.dead ? "--" : r.exh.on ? "ligado" : "desligado";
+        if (cp) cp.textContent = r.exh.dead ? "—" : r.exh.on ? "ligado" : "desligado";
         ex.querySelectorAll(".mwp-k").forEach((b) => {
           b.classList.toggle("off", !r.exh.on);
           const lab = r.exh.on ? b.dataset.lon : b.dataset.loff;
@@ -1685,6 +1748,12 @@
       if (this._config.curtain) say("cortina", r.cur);
       if (this._config.blackout) say("blackout", r.bo);
       if (this._config.exhaust && !r.exh.dead) bits.push("exaustor " + (r.exh.on ? "ligado" : "desligado"));
+      // O estado do sensor entra no resumo em PALAVRA: no SVG ele só tem cor,
+      // e a cena inteira é aria-hidden.
+      const sens = [];
+      if (r.sl && !r.sl.dead) sens.push("esquerda " + (r.sl.on ? "aberta" : "fechada"));
+      if (r.sr && !r.sr.dead) sens.push("direita " + (r.sr.on ? "aberta" : "fechada"));
+      if (sens.length) bits.push(sens.join(" e "));
       return bits.join(" · ");
     }
 
@@ -1694,11 +1763,11 @@
       const out = [];
       if (c.show_climate && r.t != null) {
         out.push('<span class="bdg v-temp" style="background:' + mwClimateColor("temperature", r.t, 0.5) +
-          '"><ha-icon icon="mdi:thermometer"></ha-icon>' + r.t.toFixed(1) + "°</span>");
+          '"><ha-icon icon="mdi:thermometer"></ha-icon>' + nfmt(this._hass, r.t, 1) + "°</span>");
       }
       if (c.show_climate && r.hum != null) {
         out.push('<span class="bdg v-hum" style="background:' + mwClimateColor("humidity", r.hum, 0.5) +
-          '"><ha-icon icon="mdi:water-percent"></ha-icon>' + Math.round(r.hum) + "%</span>");
+          '"><ha-icon icon="mdi:water-percent"></ha-icon>' + nfmt(this._hass, Math.round(r.hum), 0) + "%</span>");
       }
       const wantBat = c.show_battery === "sempre" || (c.show_battery === "auto" && r.bat != null && r.bat <= 35);
       if (wantBat && r.bat != null) {
